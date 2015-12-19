@@ -64,8 +64,15 @@ AJS.$(function() {
                         if (response=="true") {
                         	// AJS.$('<img src="download/resources/com.bitium.confluence.SAML2Plugin/images/progress.png"/>').insertBefore(AJS.$(".aui.login-form-container"));
             				AJS.$('<p>Please wait while we redirect you to your company log in page</p>').insertBefore(loginForm);
-            				window.location.href = 'plugins/servlet/saml/auth';
-			        
+                            // Retrieve os_destination request parameter if available in original application URL that user sent
+                            // and send it along. This way, we can remember where user really wanted to go in first place!
+                            var osdestinationmatch = window.location.href.match(/os_destination=([^&]+)/);
+                            if (osdestinationmatch) {
+                                window.location.href = 'plugins/servlet/saml/auth?os_destination=' + osdestinationmatch[1];
+                            } else {
+                                window.location.href = 'plugins/servlet/saml/auth';
+                            }
+
 			} else {
 				loginForm.show();
 			}

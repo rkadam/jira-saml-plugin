@@ -52,6 +52,14 @@ public class SsoLoginServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+
+		//If os_destination parameter is not null, it means user wants to go to specific protected URL after authentication.
+		//Let's put this parameter and it's value in session so that we can redirect User later to desired destination!
+		//This parameter gets in action in doPost method via authenticateUserAndLogin()!
+		if (request.getParameter("os_destination") != null) {
+			request.getSession().setAttribute("os_destination", request.getParameter("os_destination"));
+		}
+
 		try {
 			SAMLContext context = new SAMLContext(request, saml2Config);
 			SAMLMessageContext messageContext = context.createSamlMessageContext(request, response);
@@ -133,10 +141,17 @@ public class SsoLoginServlet extends HttpServlet {
 		    	authUserMethod.setAccessible(true);
 		    	Boolean result = (Boolean)authUserMethod.invoke(authenticator, new Object[]{request, response, principal});
 
-		        if (result) {
-		        	response.sendRedirect("/jira/secure/Dashboard.jspa");
-		        	return;
-		        }
+				// If User has accessed specific protected URL, then we should honor that request.
+				// os_destination parameter will help us here to do exactly same!
+				if (result) {
+					if(request.getSession() != null && request.getSession().getAttribute("os_destination") != null) {
+						String os_destination = request.getSession().getAttribute("os_destination").toString();
+						response.sendRedirect(os_destination);
+					} else {
+						response.sendRedirect("/jira/secure/Dashboard.jspa");
+					}
+					return;
+				}
 		    }
 		}
 
