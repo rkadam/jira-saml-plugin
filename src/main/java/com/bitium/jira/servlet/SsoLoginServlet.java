@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.Principal;
+import java.net.URI;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -53,11 +54,35 @@ public class SsoLoginServlet extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 
+		//Initial idea was to pass os_destination when we do OneLogin redirection via loginAuth.js.
+		//But easier way is, use http referer which already has this information! So that's what we are doing here.
 		//If os_destination parameter is not null, it means user wants to go to specific protected URL after authentication.
-		//Let's put this parameter and it's value in session so that we can redirect User later to desired destination!
+		//Let's put this parameter and it's value in session so that we can redirect User later to this desired destination!
 		//This parameter gets in action in doPost method via authenticateUserAndLogin()!
-		if (request.getParameter("os_destination") != null) {
-			request.getSession().setAttribute("os_destination", request.getParameter("os_destination"));
+		String refererURL = request.getHeader("Referer");
+		String os_destination = null;
+		if (refererURL != null) {
+			try{
+				URI url = new URI(refererURL);
+				String queryString = url.getRawQuery();
+				if (queryString != null){
+					String[] params = queryString.split("&");
+					for (String param: params) {
+						String key = param.substring(0, param.indexOf('='));
+						if (key.equals("os_destination")){
+							String val = param.substring(param.indexOf('=') + 1);
+							os_destination = java.net.URLDecoder.decode(val, "UTF-8");
+						}
+					}
+				}
+			}
+			catch (java.net.URISyntaxException urs){
+				//Do nothing as os_destination is already initialized to null!
+			}
+		}
+
+		if (os_destination != null) {
+			request.getSession().setAttribute("os_destination", os_destination);
 		}
 
 		try {
